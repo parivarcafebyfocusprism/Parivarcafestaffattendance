@@ -1,0 +1,926 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Staff Attendance – Focus Prism</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js" onerror="this.onerror=null;var x=document.createElement('script');x.src='https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js';document.head.appendChild(x)"></script>
+<style>
+:root{
+  --ink:#16262b; --muted:#5b6d72; --paper:#eaf0ee; --panel:#ffffff; --line:#cdd8d5;
+  --brand:#0d5c63; --brand-ink:#ffffff; --mark:#e9a820; --danger:#b3261e;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header{background:var(--brand);color:var(--brand-ink);padding:10px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+header h1{font-size:18px;margin:0;flex:1 1 auto;font-weight:700}
+header small{display:block;font-weight:400;opacity:.8;font-size:12px}
+nav{display:flex;overflow-x:auto;background:var(--panel);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
+nav button{flex:0 0 auto;border:0;background:none;padding:12px 16px;font:inherit;color:var(--muted);border-bottom:3px solid transparent;cursor:pointer;white-space:nowrap}
+nav button.on{color:var(--ink);font-weight:700;border-bottom-color:var(--mark)}
+main{max-width:1100px;margin:0 auto;padding:12px}
+.tab{display:none}.tab.on{display:block}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:12px;margin-bottom:12px}
+h2{font-size:16px;margin:0 0 10px}
+label{display:block;font-size:13px;color:var(--muted);margin-bottom:3px}
+input,select,button{font:inherit}
+input[type=text],input[type=date],input[type=number],select{width:100%;padding:9px 8px;border:1px solid var(--line);border-radius:5px;background:#fff;color:var(--ink);min-height:40px}
+input[type=color]{width:56px;height:40px;padding:2px;border:1px solid var(--line);border-radius:5px;background:#fff}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
+.bar{display:flex;gap:8px;flex-wrap:wrap;align-items:end;margin-bottom:10px}
+.bar>div{flex:1 1 150px}
+.btn{border:1px solid var(--brand);background:var(--brand);color:#fff;padding:9px 14px;border-radius:5px;cursor:pointer;min-height:40px}
+.btn.alt{background:#fff;color:var(--brand)}
+.btn.warn{background:#fff;color:var(--danger);border-color:var(--danger)}
+.btn.sm{padding:5px 10px;min-height:32px;font-size:13px}
+.btn.xl{background:var(--mark);border-color:var(--mark);color:#201500;font-weight:700}
+.note{color:var(--muted);font-size:13px}
+.dept{background:#dff0f2;font-weight:700;padding:6px 10px;border-radius:4px;margin:12px 0 4px}
+.row{display:grid;grid-template-columns:1fr 92px 138px;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line)}
+.row .who b{display:block}
+.row .who small{color:var(--muted)}
+.row select{min-height:38px;padding:6px 4px}
+.tbl{overflow-x:auto}
+textarea{width:100%;padding:9px 8px;border:1px solid var(--line);border-radius:5px;font:inherit;color:var(--ink);background:#fff}
+.reg th,.reg td{padding:2px 3px}
+.reg td.name{position:sticky;left:0;background:#fff;text-align:left;z-index:1;min-width:130px}
+.reg td.dh{background:#dff0f2;font-weight:700;text-align:left}
+.reg select{width:46px;min-width:46px;padding:2px 0;min-height:30px;font-size:12px;text-align:center;text-align-last:center;border-radius:3px}
+.reg td.dw,.reg td.pc{font-size:13px}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{border:1px solid var(--line);padding:5px 7px;text-align:center;white-space:nowrap}
+th{background:#dff0f2;position:sticky;top:0}
+td.l,th.l{text-align:left}
+.sw{display:inline-block;width:18px;height:18px;border-radius:3px;border:1px solid #0003;vertical-align:middle}
+#status{font-size:12px;opacity:.9}
+.staffrow{display:flex;gap:8px;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line)}
+.staffrow .who small{display:block;color:var(--muted)}
+.chip{display:inline-flex;gap:6px;align-items:center;border:1px solid var(--line);border-radius:14px;padding:3px 6px 3px 10px;margin:3px 4px 3px 0;font-size:13px}
+.chip button{border:0;background:none;color:var(--danger);font-size:16px;cursor:pointer;line-height:1}
+:focus-visible{outline:3px solid var(--mark);outline-offset:1px}
+@media print{
+  @page{size:landscape;margin:10mm}
+  header,nav,.bar,.btn,.noprint{display:none!important}
+  .tab{display:none!important}.tab.on{display:block!important}
+  body{background:#fff}.panel{border:0}
+}
+</style>
+</head>
+<body>
+<header>
+  <h1>Staff Attendance<small>Focus Prism</small></h1>
+  <span id="status"></span>
+  <button class="btn xl" id="btnExport">Export to Excel</button>
+</header>
+<nav id="nav">
+  <button data-tab="att" class="on">Daily attendance</button>
+  <button data-tab="staff">Staff form</button>
+  <button data-tab="month">Monthly summary</button>
+  <button data-tab="dept">Department report</button>
+  <button data-tab="set">Settings &amp; backup</button>
+</nav>
+<main>
+
+<!-- DAILY ATTENDANCE -->
+
+<section class="tab on" id="tab-att">
+  <div class="panel">
+    <div class="bar">
+      <div><label for="attDate">Date</label><input type="date" id="attDate"></div>
+      <div><label for="attDept">Department</label><select id="attDept"></select></div>
+      <div style="flex:0 0 auto"><button class="btn alt" id="btnAllP">Mark unmarked as Present</button></div>
+      <div style="flex:0 0 auto"><button class="btn alt" id="btnExportDay">Export this day</button></div>
+    </div>
+    <div class="note" id="attCount"></div>
+    <div id="attList"></div>
+  </div>
+</section>
+
+<!-- STAFF FORM -->
+
+<section class="tab" id="tab-staff">
+  <div class="panel">
+    <h2 id="staffTitle">Add staff</h2>
+    <div class="grid">
+      <div><label for="fId">Employee ID</label><input type="text" id="fId" autocomplete="off"></div>
+      <div><label for="fName">Employee name</label><input type="text" id="fName" autocomplete="off"></div>
+      <div><label for="fDept">Department</label><select id="fDept"></select></div>
+      <div><label for="fHours">Working hours</label><input type="text" id="fHours" placeholder="e.g. 07:00 - 16:00" autocomplete="off"></div>
+      <div><label for="fStatus">Employment status</label><select id="fStatus"><option>Active</option><option>Inactive</option></select></div>
+      <div><label for="fDoj">Date of joining</label><input type="date" id="fDoj"></div>
+    </div>
+    <div class="bar" style="margin-top:12px">
+      <div style="flex:0 0 auto"><button class="btn" id="btnSaveStaff">Save staff</button></div>
+      <div style="flex:0 0 auto"><button class="btn alt" id="btnClearStaff">Clear form</button></div>
+    </div>
+    <div class="note">Only Active staff appear in daily attendance and reports. Set a person to Inactive instead of deleting to keep their past records.</div>
+  </div>
+  <div class="panel">
+    <h2>Bulk import</h2>
+    <p class="note">Paste one person per line, or choose an Excel or CSV file. Column order: Department, Employee Name, Working Hours. A header row with Employee ID, Status and Date of Joining columns is also understood. People already in the same department are skipped, missing IDs are generated, and new departments are created.</p>
+    <textarea id="bulkText" rows="6" placeholder="Pantry, Employee name, 07:00 - 16:00"></textarea>
+    <div class="bar" style="margin-top:8px">
+      <div style="flex:0 0 auto"><button class="btn" id="btnBulkText">Import pasted list</button></div>
+      <div style="flex:0 0 auto"><button class="btn alt" id="btnBulkFile">Import Excel or CSV file</button></div>
+      <div style="flex:0 0 auto"><button class="btn alt" id="btnBulkTemplate">Download template</button></div>
+      <input type="file" id="bulkFile" accept=".xlsx,.xls,.csv" hidden>
+    </div>
+    <div class="note" id="bulkResult"></div>
+  </div>
+  <div class="panel">
+    <h2>Staff list</h2>
+    <div class="bar">
+      <div><label for="sDept">Department</label><select id="sDept"></select></div>
+      <div><label for="sSearch">Search</label><input type="text" id="sSearch" placeholder="Name or ID"></div>
+      <div style="flex:0 0 auto"><button class="btn alt" id="btnExportStaff">Export staff list</button></div>
+    </div>
+    <div id="staffList"></div>
+  </div>
+</section>
+
+<!-- MONTHLY SUMMARY -->
+
+<section class="tab" id="tab-month">
+  <div class="panel">
+    <div class="bar">
+      <div><label for="mMonth">Month</label><select id="mMonth"></select></div>
+      <div><label for="mYear">Year</label><input type="number" id="mYear" min="2000" max="2100"></div>
+      <div><label for="mView">View</label><select id="mView"><option value="reg">Month register</option><option value="sum">Summary</option></select></div>
+      <div style="flex:0 0 auto"><button class="btn alt" id="btnExportMonth">Export month</button></div>
+      <div style="flex:0 0 auto"><button class="btn alt" onclick="window.print()">Print</button></div>
+    </div>
+    <div class="bar">
+      <div><label for="gOff">Weekly off day</label><select id="gOff"><option value="">None</option><option value="0">Sunday</option><option value="1">Monday</option><option value="2">Tuesday</option><option value="3">Wednesday</option><option value="4">Thursday</option><option value="5">Friday</option><option value="6">Saturday</option></select></div>
+      <div><label for="gFill">Fill other empty days with Present</label><select id="gFill"><option value="none">Leave blank</option><option value="today">Up to today</option><option value="all">Whole month</option></select></div>
+      <div style="flex:0 0 auto"><button class="btn" id="btnGen">Generate month attendance</button></div>
+    </div>
+    <div class="note" id="mInfo"></div>
+    <div class="tbl" id="mTable"></div>
+  </div>
+</section>
+
+<!-- DEPARTMENT REPORT -->
+
+<section class="tab" id="tab-dept">
+  <div class="panel">
+    <div class="bar">
+      <div><label for="dDate">Date</label><input type="date" id="dDate"></div>
+      <div style="flex:0 0 auto"><button class="btn alt" onclick="window.print()">Print</button></div>
+    </div>
+    <div class="tbl" id="dTable"></div>
+  </div>
+</section>
+
+<!-- SETTINGS -->
+
+<section class="tab" id="tab-set">
+  <div class="panel">
+    <h2>Backup and restore</h2>
+    <div class="bar">
+      <div style="flex:0 0 auto"><button class="btn" id="btnBackup">Download backup</button></div>
+      <div style="flex:0 0 auto"><button class="btn alt" id="btnRestore">Restore from backup</button></div>
+      <input type="file" id="fileRestore" accept=".json,application/json" hidden>
+    </div>
+    <div class="note">Data is saved in this browser only. Download a backup regularly and before clearing browser data.</div>
+  </div>
+  <div class="panel">
+    <h2>Leave policy</h2>
+    <label for="setLeave">Approved leave (L) is</label>
+    <select id="setLeave">
+      <option value="excluded">Excluded from scheduled working days</option>
+      <option value="present">Counted as a present day</option>
+      <option value="absent">Counted as scheduled but not present</option>
+    </select>
+  </div>
+  <div class="panel">
+    <h2>Attendance codes</h2>
+    <div class="tbl"><table id="codeTbl"></table></div>
+    <div class="grid" style="margin-top:10px">
+      <div><label for="cCode">Code (up to 4 letters)</label><input type="text" id="cCode" maxlength="4"></div>
+      <div><label for="cLabel">Meaning</label><input type="text" id="cLabel"></div>
+      <div><label for="cType">Counts as</label>
+        <select id="cType">
+          <option value="present">Present day</option>
+          <option value="half">Half day</option>
+          <option value="absent">Absent</option>
+          <option value="leave">Leave</option>
+          <option value="off">Off (not scheduled)</option>
+        </select></div>
+      <div><label for="cColor">Colour</label><input type="color" id="cColor" value="#ddd6fe"></div>
+    </div>
+    <div class="bar" style="margin-top:10px"><div style="flex:0 0 auto"><button class="btn" id="btnAddCode">Add code</button></div></div>
+  </div>
+  <div class="panel">
+    <h2>Departments</h2>
+    <div id="deptChips"></div>
+    <div class="bar" style="margin-top:8px">
+      <div><label for="newDept">New department</label><input type="text" id="newDept"></div>
+      <div style="flex:0 0 auto"><button class="btn" id="btnAddDept">Add department</button></div>
+    </div>
+  </div>
+  <div class="panel">
+    <h2>Shifts</h2>
+    <div id="shiftChips"></div>
+    <div class="bar" style="margin-top:8px">
+      <div><label for="newShift">New shift</label><input type="text" id="newShift"></div>
+      <div style="flex:0 0 auto"><button class="btn" id="btnAddShift">Add shift</button></div>
+    </div>
+  </div>
+  <div class="panel">
+    <h2>Clear data</h2>
+    <button class="btn warn" id="btnClear">Delete all saved data</button>
+  </div>
+</section>
+</main>
+
+<script>
+const KEY = 'StaffAttendanceFP';
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pad = n => String(n).padStart(2, '0');
+
+function defaults() {
+  return {
+    staff: [],
+    att: {},
+    depts: ['Pantry','Tandoor','South Indian','Metro Adda','Chinese','Indian North','Mor','Rasa','Metro Chai'],
+    codes: [
+      {code:'P',  label:'Present',    color:'#bbf7d0', type:'present', core:true},
+      {code:'A',  label:'Absent',     color:'#fecaca', type:'absent',  core:true},
+      {code:'WO', label:'Weekly Off', color:'#bae6fd', type:'off',     core:true},
+      {code:'L',  label:'Leave',      color:'#fed7aa', type:'leave',   core:true},
+      {code:'HD', label:'Half Day',   color:'#fef08a', type:'half',    core:true},
+      {code:'H',  label:'Holiday',    color:'#d1d5db', type:'off',     core:true}
+    ],
+    shifts: ['Mor','Br','2nd','Night','G','Off'],
+    settings: {leave:'excluded'}
+  };
+}
+let db = load();
+function load() {
+  const d = defaults();
+  try {
+    const s = JSON.parse(localStorage.getItem(KEY));
+    if (s && typeof s === 'object') {
+      return Object.assign(d, s, {settings: Object.assign(d.settings, s.settings || {})});
+    }
+  } catch (e) {}
+  return d;
+}
+function save() {
+  try {
+    localStorage.setItem(KEY, JSON.stringify(db));
+    const t = new Date();
+    $('status').textContent = 'Saved ' + pad(t.getHours()) + ':' + pad(t.getMinutes());
+  } catch (e) {
+    $('status').textContent = 'Could not save';
+    alert('Saving failed. Browser storage may be full or blocked.');
+  }
+}
+const cobj = k => db.codes.find(c => c.code === k);
+const dim = (y, m) => new Date(y, m + 1, 0).getDate();
+const dstr = (y, m, d) => y + '-' + pad(m + 1) + '-' + pad(d);
+const today = () => { const t = new Date(); return dstr(t.getFullYear(), t.getMonth(), t.getDate()); };
+function orderedStaff(activeOnly = true) {
+  const out = [];
+  db.depts.forEach(d => db.staff.forEach(s => {
+    if (s.dept === d && (!activeOnly || s.status === 'Active')) out.push(s);
+  }));
+  db.staff.forEach(s => {
+    if (!db.depts.includes(s.dept) && (!activeOnly || s.status === 'Active')) out.push(s);
+  });
+  return out;
+}
+function recOf(date, id) { return (db.att[date] && db.att[date][id]) || null; }
+// returns [presentEquivalent, scheduled]
+function val(codeKey, date) {
+  if (!codeKey) return date > today() ? [0, 0] : [0, 1];
+  const c = cobj(codeKey) || {type:'off'};
+  switch (c.type) {
+    case 'present': return [1, 1];
+    case 'half': return [0.5, 1];
+    case 'absent': return [0, 1];
+    case 'leave': { const p = db.settings.leave; return p === 'present' ? [1, 1] : p === 'absent' ? [0, 1] : [0, 0]; }
+    default: return [0, 0];
+  }
+}
+
+/* ---------- Tabs ---------- */
+$('nav').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  document.querySelectorAll('nav button').forEach(x => x.classList.toggle('on', x === b));
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('on', t.id === 'tab-' + b.dataset.tab));
+  renderAll();
+});
+
+/* ---------- Dropdown fills ---------- */
+function fillDeptSelect(el, withAll) {
+  const cur = el.value;
+  el.innerHTML = (withAll ? '<option value="">All departments</option>' : '') +
+    db.depts.map(d => '<option>' + esc(d) + '</option>').join('');
+  if ([...el.options].some(o => o.value === cur)) el.value = cur;
+}
+
+/* ---------- Daily attendance ---------- */
+function renderAtt() {
+  fillDeptSelect($('attDept'), true);
+  const date = $('attDate').value;
+  const dept = $('attDept').value;
+  const list = orderedStaff().filter(s => !dept || s.dept === dept);
+  if (!db.staff.length) {
+    $('attList').innerHTML = '<p class="note">No staff yet. Add people in the Staff form tab.</p>';
+    $('attCount').textContent = '';
+    return;
+  }
+  if (!date) { $('attList').innerHTML = '<p class="note">Choose a date.</p>'; return; }
+  let html = '', last = null, marked = 0;
+  list.forEach(s => {
+    if (s.dept !== last) { html += '<div class="dept">' + esc(s.dept) + '</div>'; last = s.dept; }
+    const r = recOf(date, s.id) || {};
+    if (r.c) marked++;
+    const c = r.c ? cobj(r.c) : null;
+    html += '<div class="row"><div class="who"><b>' + esc(s.name) + '</b><small>' + esc(s.id) + (s.hours ? ' · ' + esc(s.hours) : '') + '</small></div>' +
+      '<select data-k="s" data-id="' + esc(s.id) + '" aria-label="Shift for ' + esc(s.name) + '"><option value="">Shift</option>' +
+      db.shifts.map(x => '<option' + (r.s === x ? ' selected' : '') + '>' + esc(x) + '</option>').join('') + '</select>' +
+      '<select data-k="c" data-id="' + esc(s.id) + '" aria-label="Attendance for ' + esc(s.name) + '" style="background:' + (c ? c.color : '#fff') + '"><option value="">Not marked</option>' +
+      db.codes.map(x => '<option value="' + esc(x.code) + '"' + (r.c === x.code ? ' selected' : '') + '>' + esc(x.code) + ' – ' + esc(x.label) + '</option>').join('') + '</select></div>';
+  });
+  $('attList').innerHTML = html || '<p class="note">No active staff in this department.</p>';
+  $('attCount').textContent = marked + ' of ' + list.length + ' marked for ' + date;
+}
+$('attList').addEventListener('change', e => {
+  const sel = e.target; if (!sel.dataset.k) return;
+  const date = $('attDate').value; const id = sel.dataset.id;
+  db.att[date] = db.att[date] || {};
+  const r = db.att[date][id] = db.att[date][id] || {};
+  if (sel.dataset.k === 'c') {
+    if (sel.value) r.c = sel.value; else delete r.c;
+    const c = cobj(sel.value); sel.style.background = c ? c.color : '#fff';
+  } else {
+    if (sel.value) r.s = sel.value; else delete r.s;
+  }
+  if (!r.c && !r.s) delete db.att[date][id];
+  if (!Object.keys(db.att[date]).length) delete db.att[date];
+  save(); renderAtt();
+});
+$('attDate').addEventListener('change', renderAtt);
+$('attDept').addEventListener('change', renderAtt);
+$('btnAllP').addEventListener('click', () => {
+  const date = $('attDate').value; if (!date) return alert('Choose a date first.');
+  const dept = $('attDept').value;
+  orderedStaff().filter(s => !dept || s.dept === dept).forEach(s => {
+    db.att[date] = db.att[date] || {};
+    const r = db.att[date][s.id] = db.att[date][s.id] || {};
+    if (!r.c) r.c = 'P';
+  });
+  save(); renderAtt();
+});
+
+/* ---------- Staff form ---------- */
+let editingId = null;
+function clearStaffForm() {
+  editingId = null;
+  ['fId','fName','fHours','fDoj'].forEach(i => $(i).value = '');
+  $('fId').disabled = false; $('fStatus').value = 'Active';
+  $('staffTitle').textContent = 'Add staff';
+}
+$('btnClearStaff').addEventListener('click', clearStaffForm);
+$('btnSaveStaff').addEventListener('click', () => {
+  const rec = {
+    id: $('fId').value.trim(), name: $('fName').value.trim(), dept: $('fDept').value,
+    hours: $('fHours').value.trim(), status: $('fStatus').value, doj: $('fDoj').value
+  };
+  if (!rec.id || !rec.name || !rec.dept) return alert('Employee ID, name and department are required.');
+  const dupId = db.staff.some(s => s.id.toLowerCase() === rec.id.toLowerCase() && s.id !== editingId);
+  if (dupId) return alert('Employee ID ' + rec.id + ' already exists.');
+  const dupName = db.staff.some(s => s.id !== editingId && s.name.toLowerCase() === rec.name.toLowerCase() && s.dept === rec.dept);
+  if (dupName) return alert(rec.name + ' is already listed in ' + rec.dept + '.');
+  if (editingId) {
+    const i = db.staff.findIndex(s => s.id === editingId);
+    rec.id = editingId; db.staff[i] = rec;
+  } else db.staff.push(rec);
+  save(); clearStaffForm(); renderStaff();
+});
+function renderStaff() {
+  fillDeptSelect($('fDept'), false);
+  fillDeptSelect($('sDept'), true);
+  const d = $('sDept').value, q = $('sSearch').value.trim().toLowerCase();
+  const list = orderedStaff(false).filter(s => (!d || s.dept === d) &&
+    (!q || s.name.toLowerCase().includes(q) || s.id.toLowerCase().includes(q)));
+  $('staffList').innerHTML = list.length ? list.map(s =>
+    '<div class="staffrow"><div class="who"><b>' + esc(s.name) + '</b><small>' + esc(s.id) + ' · ' + esc(s.dept) +
+    (s.hours ? ' · ' + esc(s.hours) : '') + ' · ' + esc(s.status) + '</small></div><div>' +
+    '<button class="btn alt sm" data-edit="' + esc(s.id) + '">Edit</button> ' +
+    '<button class="btn warn sm" data-del="' + esc(s.id) + '">Delete</button></div></div>').join('')
+    : '<p class="note">No staff found.</p>';
+}
+$('sDept').addEventListener('change', renderStaff);
+$('sSearch').addEventListener('input', renderStaff);
+$('staffList').addEventListener('click', e => {
+  const ed = e.target.dataset.edit, dl = e.target.dataset.del;
+  if (ed) {
+    const s = db.staff.find(x => x.id === ed); if (!s) return;
+    editingId = s.id;
+    $('fId').value = s.id; $('fId').disabled = true; $('fName').value = s.name; $('fDept').value = s.dept;
+    $('fHours').value = s.hours || ''; $('fStatus').value = s.status; $('fDoj').value = s.doj || '';
+    $('staffTitle').textContent = 'Edit staff';
+    window.scrollTo({top: 0, behavior: 'smooth'});
+  }
+  if (dl) {
+    const s = db.staff.find(x => x.id === dl); if (!s) return;
+    if (!confirm('Delete ' + s.name + '? Past attendance records for this ID stay in the backup but will no longer show. Setting the person to Inactive is safer.')) return;
+    db.staff = db.staff.filter(x => x.id !== dl); save(); renderStaff();
+  }
+});
+
+/* ---------- Bulk import ---------- */
+function nextId() {
+  let n = db.staff.length + 1;
+  const used = new Set(db.staff.map(s => s.id.toLowerCase()));
+  while (used.has('e' + String(n).padStart(3, '0'))) n++;
+  return 'E' + String(n).padStart(3, '0');
+}
+function normDate(v) {
+  v = String(v == null ? '' : v).trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(v)) return v;
+  const m = v.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})$/);
+  return m ? m[3] + '-' + pad(+m[2]) + '-' + pad(+m[1]) : '';
+}
+function importRows(rows) {
+  rows = rows.map(r => r.map(c => String(c == null ? '' : c).trim())).filter(r => r.some(c => c));
+  if (!rows.length) return {added: 0, text: 'Nothing to import.'};
+  let map = {dept: 0, name: 1, hours: 2, id: -1, status: -1, doj: -1};
+  const head = rows[0].map(c => c.toLowerCase());
+  if (head.some(c => /^dep/.test(c))) {
+    rows.shift();
+    map = {dept: -1, name: -1, hours: -1, id: -1, status: -1, doj: -1};
+    head.forEach((c, i) => {
+      if (/^dep/.test(c)) map.dept = i;
+      else if (/id$/.test(c)) map.id = i;
+      else if (/name/.test(c)) map.name = i;
+      else if (/hour|timing/.test(c)) map.hours = i;
+      else if (/status/.test(c)) map.status = i;
+      else if (/join|doj/.test(c)) map.doj = i;
+    });
+    if (map.dept < 0 || map.name < 0) return {added: 0, text: 'The header row needs Department and Employee Name columns.'};
+  }
+  const get = (r, i) => (i >= 0 && i < r.length ? r[i] : '');
+  let added = 0, skipped = [], newDepts = 0;
+  rows.forEach(r => {
+    const name = get(r, map.name);
+    let dept = get(r, map.dept);
+    if (!name || !dept) { skipped.push((name || 'a blank name') + ' (missing department or name)'); return; }
+    const known = db.depts.find(d => d.toLowerCase() === dept.toLowerCase());
+    if (known) dept = known;
+    const id = get(r, map.id);
+    if (id && db.staff.some(s => s.id.toLowerCase() === id.toLowerCase())) { skipped.push(name + ' (ID ' + id + ' exists)'); return; }
+    if (db.staff.some(s => s.dept === dept && s.name.toLowerCase() === name.toLowerCase())) { skipped.push(name + ' (already in ' + dept + ')'); return; }
+    if (!known) { db.depts.push(dept); newDepts++; }
+    db.staff.push({
+      id: id || nextId(), name: name, dept: dept, hours: get(r, map.hours),
+      status: /^inactive/i.test(get(r, map.status)) ? 'Inactive' : 'Active', doj: normDate(get(r, map.doj))
+    });
+    added++;
+  });
+  let text = added + ' staff added.';
+  if (newDepts) text += ' ' + newDepts + ' new department' + (newDepts > 1 ? 's' : '') + ' created.';
+  if (skipped.length) text += ' Skipped ' + skipped.length + ': ' + skipped.slice(0, 6).join('; ') + (skipped.length > 6 ? '; …' : '') + '.';
+  return {added: added, text: text};
+}
+function finishImport(res) {
+  $('bulkResult').textContent = res.text;
+  if (res.added) { save(); renderAll(); }
+}
+$('btnBulkText').addEventListener('click', () => {
+  const lines = $('bulkText').value.split(/\r?\n/).filter(l => l.trim());
+  const rows = lines.map(l => (l.indexOf('\t') >= 0 ? l.split('\t') : l.split(',')));
+  const res = importRows(rows);
+  if (res.added) $('bulkText').value = '';
+  finishImport(res);
+});
+$('btnBulkFile').addEventListener('click', () => $('bulkFile').click());
+$('bulkFile').addEventListener('change', e => {
+  const f = e.target.files[0]; if (!f) return;
+  if (typeof XLSX === 'undefined') { e.target.value = ''; return alert('The Excel library did not load. Check your internet connection and try again.'); }
+  const rd = new FileReader();
+  rd.onload = () => {
+    try {
+      const wb = XLSX.read(new Uint8Array(rd.result), {type: 'array'});
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      finishImport(importRows(XLSX.utils.sheet_to_json(ws, {header: 1, raw: false, defval: ''})));
+    } catch (err) { $('bulkResult').textContent = 'That file could not be read.'; }
+  };
+  rd.readAsArrayBuffer(f); e.target.value = '';
+});
+$('btnBulkTemplate').addEventListener('click', () => {
+  if (typeof XLSX === 'undefined') return alert('The Excel library did not load. Check your internet connection and try again.');
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([['Department', 'Employee Name', 'Working Hours', 'Employee ID', 'Status', 'Date of Joining']]), 'Staff Import');
+  XLSX.writeFile(wb, 'Staff-Import-Template.xlsx');
+});
+
+/* ---------- Monthly register and summary ---------- */
+function calcStaff(s, y, m) {
+  const n = dim(y, m); const counts = {};
+  let pe = 0, sched = 0, unmarked = 0, dw = 0;
+  for (let d = 1; d <= n; d++) {
+    const ds = dstr(y, m, d); const r = recOf(ds, s.id); const k = r && r.c;
+    if (k) {
+      counts[k] = (counts[k] || 0) + 1;
+      const c = cobj(k);
+      if (c && c.type === 'present') dw += 1;
+      else if (c && c.type === 'half') dw += 0.5;
+    } else if (ds <= today()) unmarked++;
+    const v = val(k, ds); pe += v[0]; sched += v[1];
+  }
+  return {s: s, counts: counts, pe: pe, sched: sched, unmarked: unmarked, dw: dw, pct: sched ? pe / sched * 100 : 0, days: n};
+}
+function monthSummary(y, m) { return orderedStaff().map(s => calcStaff(s, y, m)); }
+function codeOptions(sel) {
+  return '<option value=""></option>' + db.codes.map(c =>
+    '<option value="' + esc(c.code) + '"' + (sel === c.code ? ' selected' : '') + '>' + esc(c.code) + '</option>').join('');
+}
+function renderMonth() {
+  const y = +$('mYear').value, m = +$('mMonth').value;
+  if (!y) return;
+  const n = dim(y, m), view = $('mView').value, staff = orderedStaff();
+  $('mInfo').textContent = MONTHS[m] + ' ' + y + ': ' + n + ' calendar days. Days worked counts P as 1 and half days as 0.5. Future dates without an entry are not counted.';
+  if (!staff.length) { $('mTable').innerHTML = '<p class="note">No active staff yet. Add or import staff first.</p>'; return; }
+  if (view === 'sum') {
+    let h = '<table><tr><th class="l">Department</th><th class="l">Employee</th><th>Days</th>' +
+      db.codes.map(c => '<th style="background:' + c.color + '">' + esc(c.code) + '</th>').join('') +
+      '<th>Not marked</th><th>Scheduled days</th><th>Days worked</th><th>Attendance %</th></tr>';
+    monthSummary(y, m).forEach(r => {
+      h += '<tr><td class="l">' + esc(r.s.dept) + '</td><td class="l">' + esc(r.s.name) + '</td><td>' + r.days + '</td>' +
+        db.codes.map(c => '<td>' + (r.counts[c.code] || 0) + '</td>').join('') +
+        '<td>' + r.unmarked + '</td><td>' + r.sched + '</td><td><b>' + r.dw + '</b></td><td><b>' + r.pct.toFixed(1) + '%</b></td></tr>';
+    });
+    $('mTable').innerHTML = h + '</table>';
+    return;
+  }
+  let h = '<table class="reg"><tr><th class="l">Employee</th><th>Hours</th>';
+  for (let d = 1; d <= n; d++) h += '<th>' + d + '</th>';
+  h += '<th>Days worked</th><th>Att %</th></tr><tr><th></th><th></th>';
+  for (let d = 1; d <= n; d++) h += '<th>' + DAYS[new Date(y, m, d).getDay()].slice(0, 2) + '</th>';
+  h += '<th></th><th></th></tr>';
+  let last = null;
+  staff.forEach(s => {
+    if (s.dept !== last) { h += '<tr><td class="dh" colspan="' + (n + 4) + '">' + esc(s.dept) + '</td></tr>'; last = s.dept; }
+    const rc = calcStaff(s, y, m);
+    h += '<tr><td class="name">' + esc(s.name) + '</td><td>' + esc(s.hours || '') + '</td>';
+    for (let d = 1; d <= n; d++) {
+      const ds = dstr(y, m, d); const r = recOf(ds, s.id); const c = r && r.c ? cobj(r.c) : null;
+      h += '<td><select data-id="' + esc(s.id) + '" data-date="' + ds + '" aria-label="' + esc(s.name) + ' ' + ds + '" style="background:' + (c ? c.color : '#fff') + '">' + codeOptions(r && r.c) + '</select></td>';
+    }
+    h += '<td class="dw"><b>' + rc.dw + '</b></td><td class="pc">' + rc.pct.toFixed(1) + '%</td></tr>';
+  });
+  $('mTable').innerHTML = h + '</table>';
+}
+$('mTable').addEventListener('change', e => {
+  const sel = e.target; if (!sel.dataset.date) return;
+  const id = sel.dataset.id, date = sel.dataset.date;
+  db.att[date] = db.att[date] || {};
+  const r = db.att[date][id] = db.att[date][id] || {};
+  if (sel.value) r.c = sel.value; else delete r.c;
+  if (!r.c && !r.s) delete db.att[date][id];
+  if (!Object.keys(db.att[date]).length) delete db.att[date];
+  const c = cobj(sel.value); sel.style.background = c ? c.color : '#fff';
+  const s = db.staff.find(x => x.id === id);
+  const rc = calcStaff(s, +$('mYear').value, +$('mMonth').value);
+  const tr = sel.closest('tr');
+  tr.querySelector('.dw').innerHTML = '<b>' + rc.dw + '</b>';
+  tr.querySelector('.pc').textContent = rc.pct.toFixed(1) + '%';
+  save();
+});
+$('mMonth').addEventListener('change', renderMonth);
+$('mYear').addEventListener('input', renderMonth);
+$('mView').addEventListener('change', renderMonth);
+$('btnGen').addEventListener('click', () => {
+  const y = +$('mYear').value, m = +$('mMonth').value; if (!y) return;
+  const staff = orderedStaff();
+  if (!staff.length) return alert('Add or import staff first.');
+  const off = $('gOff').value, fill = $('gFill').value;
+  if (off === '' && fill === 'none') return alert('Choose a weekly off day, a fill option, or both.');
+  if (!confirm('Generate attendance for ' + MONTHS[m] + ' ' + y + '? Only empty days are filled. Entries you already made are not changed.')) return;
+  const t = today(), n = dim(y, m); let count = 0;
+  staff.forEach(s => {
+    for (let d = 1; d <= n; d++) {
+      const ds = dstr(y, m, d);
+      if (s.doj && ds < s.doj) continue;
+      const cur = recOf(ds, s.id); if (cur && cur.c) continue;
+      let code = null;
+      if (off !== '' && new Date(y, m, d).getDay() === +off) code = 'WO';
+      else if (fill === 'all' || (fill === 'today' && ds <= t)) code = 'P';
+      if (!code) continue;
+      db.att[ds] = db.att[ds] || {};
+      const r = db.att[ds][s.id] = db.att[ds][s.id] || {};
+      r.c = code; count++;
+    }
+  });
+  save(); $('mView').value = 'reg'; renderMonth();
+  alert(count + ' entries generated for ' + MONTHS[m] + ' ' + y + '.');
+});
+
+/* ---------- Department report ---------- */
+function deptReport(date) {
+  return db.depts.map(d => {
+    const list = orderedStaff().filter(s => s.dept === d);
+    let present = 0, absent = 0, leave = 0, off = 0, unmarked = 0, pe = 0, sched = 0;
+    list.forEach(s => {
+      const r = recOf(date, s.id); const k = r && r.c; const c = k ? (cobj(k) || {type:'off'}) : null;
+      if (!c) unmarked++;
+      else if (c.type === 'present' || c.type === 'half') present++;
+      else if (c.type === 'absent') absent++;
+      else if (c.type === 'leave') leave++;
+      else off++;
+      const v = val(k, date); pe += v[0]; sched += v[1];
+    });
+    return {d, total: list.length, present, absent, leave, off, unmarked, pct: sched ? pe / sched * 100 : 0};
+  }).filter(r => r.total > 0);
+}
+function renderDept() {
+  const date = $('dDate').value; if (!date) return;
+  const rows = deptReport(date);
+  if (!rows.length) { $('dTable').innerHTML = '<p class="note">No active staff yet.</p>'; return; }
+  const tot = rows.reduce((a, r) => { ['total','present','absent','leave','off','unmarked'].forEach(k => a[k] += r[k]); return a; },
+    {total:0, present:0, absent:0, leave:0, off:0, unmarked:0});
+  $('dTable').innerHTML = '<table><tr><th class="l">Department</th><th>Employees</th><th>Present</th><th>Absent</th><th>On leave</th><th>Off</th><th>Not marked</th><th>Attendance %</th></tr>' +
+    rows.map(r => '<tr><td class="l">' + esc(r.d) + '</td><td>' + r.total + '</td><td>' + r.present + '</td><td>' + r.absent +
+      '</td><td>' + r.leave + '</td><td>' + r.off + '</td><td>' + r.unmarked + '</td><td><b>' + r.pct.toFixed(1) + '%</b></td></tr>').join('') +
+    '<tr><th class="l">All departments</th><th>' + tot.total + '</th><th>' + tot.present + '</th><th>' + tot.absent + '</th><th>' + tot.leave + '</th><th>' + tot.off + '</th><th>' + tot.unmarked + '</th><th></th></tr></table>';
+}
+$('dDate').addEventListener('change', renderDept);
+
+/* ---------- Settings ---------- */
+function renderSettings() {
+  $('setLeave').value = db.settings.leave;
+  const typeName = {present:'Present day', half:'Half day', absent:'Absent', leave:'Leave', off:'Off (not scheduled)'};
+  $('codeTbl').innerHTML = '<tr><th>Colour</th><th>Code</th><th class="l">Meaning</th><th class="l">Counts as</th><th></th></tr>' +
+    db.codes.map(c => '<tr><td><span class="sw" style="background:' + c.color + '"></span></td><td><b>' + esc(c.code) + '</b></td><td class="l">' + esc(c.label) +
+      '</td><td class="l">' + typeName[c.type] + '</td><td>' + (c.core ? '' : '<button class="btn warn sm" data-dc="' + esc(c.code) + '">Remove</button>') + '</td></tr>').join('');
+  $('deptChips').innerHTML = db.depts.map(d => '<span class="chip">' + esc(d) + '<button aria-label="Remove ' + esc(d) + '" data-dd="' + esc(d) + '">×</button></span>').join('');
+  $('shiftChips').innerHTML = db.shifts.map(d => '<span class="chip">' + esc(d) + '<button aria-label="Remove ' + esc(d) + '" data-ds="' + esc(d) + '">×</button></span>').join('');
+}
+$('setLeave').addEventListener('change', () => { db.settings.leave = $('setLeave').value; save(); });
+$('btnAddCode').addEventListener('click', () => {
+  const code = $('cCode').value.trim().toUpperCase(), label = $('cLabel').value.trim();
+  if (!code || !label) return alert('Enter a code and its meaning.');
+  if (cobj(code)) return alert('The code ' + code + ' already exists.');
+  db.codes.push({code, label, color: $('cColor').value, type: $('cType').value});
+  $('cCode').value = ''; $('cLabel').value = ''; save(); renderSettings();
+});
+$('btnAddDept').addEventListener('click', () => {
+  const v = $('newDept').value.trim(); if (!v) return;
+  if (db.depts.some(d => d.toLowerCase() === v.toLowerCase())) return alert('That department already exists.');
+  db.depts.push(v); $('newDept').value = ''; save(); renderSettings();
+});
+$('btnAddShift').addEventListener('click', () => {
+  const v = $('newShift').value.trim(); if (!v) return;
+  if (db.shifts.some(d => d.toLowerCase() === v.toLowerCase())) return alert('That shift already exists.');
+  db.shifts.push(v); $('newShift').value = ''; save(); renderSettings();
+});
+$('tab-set').addEventListener('click', e => {
+  const t = e.target;
+  if (t.dataset.dc) {
+    if (!confirm('Remove code ' + t.dataset.dc + '? Days already marked with it will count as off.')) return;
+    db.codes = db.codes.filter(c => c.code !== t.dataset.dc); save(); renderSettings();
+  }
+  if (t.dataset.dd) {
+    if (db.staff.some(s => s.dept === t.dataset.dd)) return alert('Staff are still assigned to this department. Move them first.');
+    db.depts = db.depts.filter(d => d !== t.dataset.dd); save(); renderSettings();
+  }
+  if (t.dataset.ds) { db.shifts = db.shifts.filter(d => d !== t.dataset.ds); save(); renderSettings(); }
+});
+
+/* ---------- Backup / restore ---------- */
+function download(blob, name) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+}
+$('btnBackup').addEventListener('click', () => {
+  download(new Blob([JSON.stringify(db, null, 2)], {type: 'application/json'}), 'staff-attendance-backup-' + today() + '.json');
+});
+$('btnRestore').addEventListener('click', () => $('fileRestore').click());
+$('fileRestore').addEventListener('change', e => {
+  const f = e.target.files[0]; if (!f) return;
+  const rd = new FileReader();
+  rd.onload = () => {
+    try {
+      const d = JSON.parse(rd.result);
+      if (!d || !Array.isArray(d.staff) || typeof d.att !== 'object') throw new Error('bad');
+      if (!confirm('Restore this backup? It replaces all data currently saved in this browser.')) return;
+      db = Object.assign(defaults(), d, {settings: Object.assign(defaults().settings, d.settings || {})});
+      save(); renderAll(); alert('Backup restored.');
+    } catch (err) { alert('This file is not a valid attendance backup.'); }
+  };
+  rd.readAsText(f); e.target.value = '';
+});
+$('btnClear').addEventListener('click', () => {
+  if (!confirm('Delete ALL staff and attendance data from this browser?')) return;
+  if (!confirm('This cannot be undone unless you have a backup. Delete everything?')) return;
+  db = defaults(); save(); renderAll();
+});
+
+/* ---------- Excel export (colour coded, ExcelJS) ---------- */
+const XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+const THIN = {style: 'thin', color: {argb: 'FF9CA3AF'}};
+const BORD = {top: THIN, left: THIN, bottom: THIN, right: THIN};
+const HEADFILL = '#CFE8F7', DEPTFILL = '#FFF3A8';
+const argb = hex => 'FF' + String(hex).replace('#', '').toUpperCase();
+const fillOf = hex => ({type: 'pattern', pattern: 'solid', fgColor: {argb: argb(hex)}});
+const pctFill = p => (p >= 90 ? '#BBF7D0' : p >= 75 ? '#FEF08A' : '#FECACA');
+function colL(i) { let s = ''; while (i > 0) { const r = (i - 1) % 26; s = String.fromCharCode(65 + r) + s; i = Math.floor((i - 1) / 26); } return s; }
+function exceljsReady() {
+  if (typeof ExcelJS === 'undefined') { alert('The Excel library did not load. Check your internet connection, reload the page and try again.'); return false; }
+  return true;
+}
+// Adds rows, borders every cell, centres everything except the 1-based columns in leftCols.
+function put(ws, aoa, widths, leftCols) {
+  aoa.forEach(r => ws.addRow(r));
+  ws.eachRow(row => row.eachCell({includeEmpty: true}, (c, i) => {
+    c.border = BORD;
+    c.alignment = {horizontal: leftCols.has(i) ? 'left' : 'center', vertical: 'middle'};
+  }));
+  widths.forEach((w, i) => { ws.getColumn(i + 1).width = w; });
+}
+function headRow(ws, rowNo, ncols, fill) {
+  for (let i = 1; i <= ncols; i++) {
+    const c = ws.getRow(rowNo).getCell(i);
+    c.fill = fillOf(fill || HEADFILL); c.font = {bold: true};
+  }
+}
+function titleCell(ws, text) { const c = ws.getCell('A1'); c.value = text; c.font = {bold: true, size: 13}; c.border = {}; }
+function landscape(ws, titleRows) {
+  ws.pageSetup = {orientation: 'landscape', paperSize: 9, fitToPage: true, fitToWidth: 1, fitToHeight: 0, printTitlesRow: titleRows};
+}
+function addStaffSheet(wb) {
+  const ws = wb.addWorksheet('Staff Master');
+  const list = orderedStaff(false);
+  put(ws, [['Department', 'Employee ID', 'Employee Name', 'Working Hours', 'Employment Status', 'Date of Joining']]
+    .concat(list.map(s => [s.dept, s.id, s.name, s.hours || '', s.status, s.doj || ''])), [16, 12, 26, 18, 18, 15], new Set([1, 3]));
+  headRow(ws, 1, 6);
+  list.forEach((s, i) => { ws.getRow(i + 2).getCell(1).fill = fillOf(DEPTFILL); });
+  ws.views = [{state: 'frozen', ySplit: 1}];
+  ws.autoFilter = {from: {row: 1, column: 1}, to: {row: Math.max(1, list.length) + 1, column: 6}};
+  landscape(ws, '1:1');
+}
+function addRegisterSheet(wb, y, m) {
+  const n = dim(y, m), total = n + 5, staff = orderedStaff();
+  const ws = wb.addWorksheet('Register ' + MONTHS[m].slice(0, 3) + ' ' + y);
+  const r1 = [MONTHS[m] + ' ' + y, '', ''], r2 = ['Department', 'Employee Name', 'Working Hours'];
+  for (let d = 1; d <= n; d++) { r1.push(d); r2.push(DAYS[new Date(y, m, d).getDay()]); }
+  r1.push('', ''); r2.push('Days Worked', 'Attendance %');
+  const body = staff.map(s => {
+    const row = [s.dept, s.name, s.hours || ''];
+    for (let d = 1; d <= n; d++) { const r = recOf(dstr(y, m, d), s.id); row.push(r && r.c ? r.c : ''); }
+    row.push(0, 0);
+    return row;
+  });
+  put(ws, [r1, r2].concat(body), [16, 26, 16].concat(Array(n).fill(5), [13, 14]), new Set([1, 2]));
+  headRow(ws, 1, total); headRow(ws, 2, total);
+  ws.getCell('A1').alignment = {horizontal: 'left', vertical: 'middle'};
+  const presentCodes = db.codes.filter(c => c.type === 'present').map(c => c.code);
+  const halfCodes = db.codes.filter(c => c.type === 'half').map(c => c.code);
+  const first = colL(4), lastDay = colL(n + 3);
+  const list = '"' + db.codes.map(c => c.code).join(',') + '"';
+  staff.forEach((s, i) => {
+    const rowNo = i + 3, row = ws.getRow(rowNo), rc = calcStaff(s, y, m), rng = first + rowNo + ':' + lastDay + rowNo;
+    row.getCell(1).fill = fillOf(DEPTFILL);
+    for (let d = 1; d <= n; d++) {
+      const cell = row.getCell(d + 3), c = cobj(cell.value);
+      if (c) cell.fill = fillOf(c.color);
+      cell.dataValidation = {type: 'list', allowBlank: true, formulae: [list]};
+    }
+    const parts = presentCodes.map(k => 'COUNTIF(' + rng + ',"' + k + '")').concat(halfCodes.map(k => '0.5*COUNTIF(' + rng + ',"' + k + '")'));
+    const dwCell = row.getCell(n + 4);
+    dwCell.value = parts.length ? {formula: parts.join('+'), result: rc.dw} : rc.dw;
+    dwCell.font = {bold: true};
+    const pc = row.getCell(n + 5);
+    pc.value = Math.round(rc.pct * 10) / 10; pc.numFmt = '0.0'; pc.fill = fillOf(pctFill(rc.pct));
+  });
+  if (staff.length) {
+    ws.addConditionalFormatting({
+      ref: first + '3:' + lastDay + (staff.length + 2),
+      rules: db.codes.map((c, i) => ({
+        type: 'cellIs', operator: 'equal', formulae: ['"' + c.code + '"'], priority: i + 1,
+        style: {fill: {type: 'pattern', pattern: 'solid', bgColor: {argb: argb(c.color)}}}
+      }))
+    });
+    ws.autoFilter = {from: {row: 2, column: 1}, to: {row: staff.length + 2, column: total}};
+  }
+  ws.views = [{state: 'frozen', xSplit: 3, ySplit: 2}];
+  landscape(ws, '1:2');
+}
+function addSummarySheet(wb, y, m) {
+  const ws = wb.addWorksheet('Monthly Summary');
+  const rows = monthSummary(y, m), k = db.codes.length;
+  const head = ['Department', 'Employee Name', 'Calendar Days'].concat(db.codes.map(c => c.code), ['Not Marked', 'Scheduled Days', 'Days Worked', 'Attendance %']);
+  put(ws, [head].concat(rows.map(r => [r.s.dept, r.s.name, r.days].concat(db.codes.map(c => r.counts[c.code] || 0),
+    [r.unmarked, r.sched, r.dw, Math.round(r.pct * 10) / 10]))), [16, 26, 13].concat(Array(k).fill(6), [12, 15, 13, 14]), new Set([1, 2]));
+  headRow(ws, 1, head.length);
+  db.codes.forEach((c, i) => { ws.getRow(1).getCell(4 + i).fill = fillOf(c.color); });
+  rows.forEach((r, i) => {
+    const row = ws.getRow(i + 2);
+    row.getCell(1).fill = fillOf(DEPTFILL);
+    const pc = row.getCell(head.length);
+    pc.numFmt = '0.0'; pc.fill = fillOf(pctFill(r.pct)); pc.font = {bold: true};
+  });
+  ws.views = [{state: 'frozen', xSplit: 2, ySplit: 1}];
+  landscape(ws, '1:1');
+}
+function addDeptSheet(wb, date) {
+  const ws = wb.addWorksheet('Department Report');
+  const rows = deptReport(date);
+  put(ws, [['Department report for ' + date], ['Department', 'Employees', 'Present', 'Absent', 'On Leave', 'Off', 'Not Marked', 'Attendance %']]
+    .concat(rows.map(r => [r.d, r.total, r.present, r.absent, r.leave, r.off, r.unmarked, Math.round(r.pct * 10) / 10])), [20, 11, 10, 10, 10, 8, 12, 14], new Set([1]));
+  titleCell(ws, 'Department report for ' + date);
+  headRow(ws, 2, 8);
+  const colour = {3: 'P', 4: 'A', 5: 'L', 6: 'WO'};
+  Object.keys(colour).forEach(i => { const c = cobj(colour[i]); if (c) ws.getRow(2).getCell(+i).fill = fillOf(c.color); });
+  rows.forEach((r, i) => {
+    const row = ws.getRow(i + 3);
+    row.getCell(1).fill = fillOf(DEPTFILL);
+    const pc = row.getCell(8); pc.numFmt = '0.0'; pc.fill = fillOf(pctFill(r.pct)); pc.font = {bold: true};
+  });
+  ws.views = [{state: 'frozen', ySplit: 2}];
+  landscape(ws, '1:2');
+}
+function addDailySheet(wb, date) {
+  const ws = wb.addWorksheet('Daily Attendance');
+  const staff = orderedStaff();
+  put(ws, [['Daily attendance for ' + date], ['Department', 'Employee ID', 'Employee Name', 'Working Hours', 'Shift', 'Attendance Code', 'Meaning']]
+    .concat(staff.map(s => {
+      const r = recOf(date, s.id) || {}; const c = r.c ? cobj(r.c) : null;
+      return [s.dept, s.id, s.name, s.hours || '', r.s || '', r.c || '', c ? c.label : ''];
+    })), [18, 12, 26, 16, 10, 16, 16], new Set([1, 3]));
+  titleCell(ws, 'Daily attendance for ' + date);
+  headRow(ws, 2, 7);
+  staff.forEach((s, i) => {
+    const row = ws.getRow(i + 3), r = recOf(date, s.id), c = r && r.c ? cobj(r.c) : null;
+    row.getCell(1).fill = fillOf(DEPTFILL);
+    if (c) { row.getCell(6).fill = fillOf(c.color); row.getCell(6).font = {bold: true}; row.getCell(7).fill = fillOf(c.color); }
+  });
+  ws.views = [{state: 'frozen', ySplit: 2}];
+  landscape(ws, '1:2');
+}
+function addCodesSheet(wb) {
+  const ws = wb.addWorksheet('Attendance Codes');
+  const typeName = {present: 'Present day', half: 'Half day', absent: 'Absent', leave: 'Leave', off: 'Off (not scheduled)'};
+  put(ws, [['Code', 'Meaning', 'Counts as']].concat(db.codes.map(c => [c.code, c.label, typeName[c.type]])), [10, 20, 22], new Set([2, 3]));
+  headRow(ws, 1, 3);
+  db.codes.forEach((c, i) => { const cell = ws.getRow(i + 2).getCell(1); cell.fill = fillOf(c.color); cell.font = {bold: true}; });
+}
+async function saveWb(wb, name) {
+  const buf = await wb.xlsx.writeBuffer();
+  download(new Blob([buf], {type: XLSX_MIME}), name);
+}
+function guard(fn) {
+  return async () => {
+    if (!exceljsReady()) return;
+    try { await fn(); } catch (err) { console.error(err); alert('The Excel file could not be created: ' + err.message); }
+  };
+}
+$('btnExport').addEventListener('click', guard(async () => {
+  const y = +$('mYear').value, m = +$('mMonth').value;
+  const wb = new ExcelJS.Workbook();
+  addStaffSheet(wb); addRegisterSheet(wb, y, m); addSummarySheet(wb, y, m);
+  addDeptSheet(wb, $('dDate').value || today()); addDailySheet(wb, $('attDate').value || today()); addCodesSheet(wb);
+  await saveWb(wb, 'Staff-Attendance-' + y + '-' + pad(m + 1) + '.xlsx');
+}));
+$('btnExportStaff').addEventListener('click', guard(async () => {
+  const wb = new ExcelJS.Workbook(); addStaffSheet(wb);
+  await saveWb(wb, 'Staff-List-' + today() + '.xlsx');
+}));
+$('btnExportDay').addEventListener('click', guard(async () => {
+  const date = $('attDate').value; if (!date) return alert('Choose a date first.');
+  const wb = new ExcelJS.Workbook(); addDailySheet(wb, date); addDeptSheet(wb, date); addCodesSheet(wb);
+  await saveWb(wb, 'Daily-Attendance-' + date + '.xlsx');
+}));
+$('btnExportMonth').addEventListener('click', guard(async () => {
+  const y = +$('mYear').value, m = +$('mMonth').value; if (!y) return;
+  const wb = new ExcelJS.Workbook(); addRegisterSheet(wb, y, m); addSummarySheet(wb, y, m); addCodesSheet(wb);
+  await saveWb(wb, 'Month-Attendance-' + y + '-' + pad(m + 1) + '.xlsx');
+}));
+
+/* ---------- Init ---------- */
+function renderAll() {
+  renderAtt(); renderStaff(); renderMonth(); renderDept(); renderSettings();
+}
+(function init() {
+  $('mMonth').innerHTML = MONTHS.map((n, i) => '<option value="' + i + '">' + n + '</option>').join('');
+  const t = new Date();
+  $('mMonth').value = t.getMonth(); $('mYear').value = t.getFullYear();
+  $('attDate').value = today(); $('dDate').value = today();
+  renderAll();
+})();
+</script>
+
+</body>
+</html>
